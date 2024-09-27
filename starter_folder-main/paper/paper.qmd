@@ -1,0 +1,156 @@
+---
+title: "Toronto Island Traffic Analysis"
+author: 
+  -Bo Tang
+thanks: "Code and data are available at: [RayanAlim/Toronto_flooding_analysis](https://github.com/RayanAlim/Toronto_flooding_analysis)"
+date: september 27,2024
+date-format: long
+abstract: "This post analyzes data for Toronto Island Ferry Ticket Counts from July 2023 to September 2024 provided by open data Toronto. The counts were found to have a very distinct time factor distribution. Suggests that ferry schedules should be adjusted relative to the time factor."
+format: 
+  pdf:
+    toc: true    
+    toc-depth: 3 
+    number-sections: true  
+    toc-title: "Table of Contents" 
+number-sections: true
+bibliography: references.bib
+---
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+library(tidyverse)
+library(palmerpenguins)
+library(readr)
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+library(knitr)
+options(scipen=999)
+monthly_summary <- read_csv("../data/analysis_data/analysis_data_month.csv")
+basic_stats <- read_csv("../data/analysis_data/basic_stats.csv")
+sales_by_day <- read_csv("../data/analysis_data/sales_by_day.csv")
+hour_data <- read_csv("../data/analysis_data/hour_data.csv")
+```
+
+# Introduction
+
+  The Toronto Island,Often referred to as Toronto Island, the Toronto Islands are a picturesque archipelago near Toronto's downtown waterfront. You can enjoy the beautiful surroundings and get away from the noise of the city. It is a place that can help cleanse the soul, and for this reason a large number of tourists as well as locals come to this place every year. There are three main ways to get to Toronto Islands, you can take a private water taxi, a tender and the main and most popular way to get to Toronto Islands is by ferry.This paper focuses on ticket sales and redemption data after 2023. due to how much the Toronto Islands are loved. This has led to a particularly high volume of traffic, and since ferries are the main way to get to the Toronto Islands, this has led to a relatively large amount of revenue for the ferries. However, this has also led to long waits for the ferry and traffic jams around the ferry. The article wants to analyze the data from September 2023 to September 2024 and the timing of the ferry. This will help people to have a more enjoyable trip to Toronto Island, as well as alleviate traffic congestion.
+
+
+
+# Data {#sec-data}
+##  Raw Data {#sub-section}
+  The data for this analysis comes from Toronto’s Open Data portal [@OpenDataPortal]:
+
+**Toronto Island Ferry Ticket Counts**:The data we are allowed to download, this packet records every 15 minutes ticket counts from July 2023 to September 23,     2024, which contains two kinds of tickets namely Redemption and Sales.A total of 32,000 pieces of data are included.
+
+## basic data information {#sub-data-section}
+  A bit of basic information about the year for both tickets, including mean, median, variance and standard deviation.The first thing we can tell is that REDEMPTION and SALES COUNTS are similar, not much different, reaching about 65 votes per 15 minutes. It can also be noticed that the data is spread out a lot if we just look at the dimension of one year
+
+```{r}
+#| fig-cap: "Total data analysis"
+#| fig-pos: "H"
+#| out.width: "70%"
+#| show_col_types: FALSE
+#| echo: false
+#| message: false
+kable(basic_stats, 
+      col.names = c("Redemption Mean", "Redemption Median", "Redemption Variance", "Redemption SD", 
+                    "Sales Mean", "Sales Median", "Sales Variance", "Sales SD"),
+      caption = "Basic Statistics of Redemption and Sales Counts")
+```
+## Monthly data distribution{#sub-monthly-data-section}
+
+```{r}
+#| fig-cap: "monthly data analysis"
+#| fig-pos: "H"
+#| out.width: "70%"
+#| show_col_types: FALSE
+#| echo: false
+#| message: false
+
+ggplot(monthly_summary, aes(x = YearMonth)) +
+  geom_line(aes(y =Redemption_Count, color = "Redemption Count"), linewidth = 1) +
+  geom_line(aes(y =Sales_Count, color = "Sales Count"), linewidth = 1) +
+  labs(title = "Monthly Trends of Redemption and Sales Counts",
+       x = "Month",
+       y = "Count",
+       color = "Legend") +
+  theme_minimal() +
+  scale_color_manual(values = c("Redemption Count" = "blue", "Sales Count" = "red")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+The data is then categorized by month and the Redemption and Sales counts are added up and it is found that in the months of July to September 2023 and May to September 2024 their counts are more than 100,000 whereas in the other months they are not more than 83,000. this is one of the reasons for the large standard deviation of the data. Then we compare the data for each month and make a line graph, we can observe the image and conclude that the amount of redemption and sales is about the same and the same as the conclusion drawn by the basic data. In this graph we can also see that Redemption and Sales counts are concentrated in the months of May to September in a year, with the highest counts in July and August.
+
+## weekly data distribution{#sub-weekly--data-section}
+
+```{r}
+#| fig-cap: "weekly data analysis"
+#| fig-pos: "H"
+#| out.width: "70%"
+#| show_col_types: FALSE
+#| echo: false
+#| message: false
+# Reorder the days of the week
+sales_by_day$day_of_week <- factor(sales_by_day$day_of_week, 
+                                   levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+
+# Create a bar plot to show total sales by day of the week
+ggplot(sales_by_day, aes(x = day_of_week, y = total_sales, fill = day_of_week)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Total Sales by Day of the Week", x = "Day of the Week", y = "Total Sales") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+The data was next broken down even more, integrating the data for each of the Monday through weekday days of the year. We find that Saturdays and Sundays are very high, which makes more sense because people don't have a lot of time to hang out on weekdays.
+
+## hourly data distribution{#sub-hour-data-section}
+
+```{r}
+#| fig-cap: "hour data analysis"
+#| fig-pos: "H"
+#| out.width: "70%"
+#| show_col_types: FALSE
+#| echo: false
+#| message: false
+
+# Assuming the file contains columns 'hour' and 'value' (replace with actual names)
+# Create a line graph to show the changes over hours
+# Reshape the data into a long format for easier plotting (sales and redemption in one column)
+long_data <- hour_data %>%
+  gather(key = "type", value = "count", sales, redemption)
+
+# Create a line graph to show changes over time for both sales and redemption
+ggplot(long_data, aes(x = hour, y = count, color = type)) +
+  geom_line(linewidth = 1) +  # Line for changes over time
+  geom_point(size = 2) +  # Points to mark each hour
+  labs(title = "Sales and Redemption Counts by Hour",
+       x = "Hour of the Day",
+       y = "Count",
+       color = "Type") +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(1, 24, by = 1))
+```
+Breaking the data down to each hour and making a trend graph reveals that the times people do the ferry are clustered between 9am and 18pm
+
+## Results {#sec-results}
+After understanding this year's data, the first thing that can be clearly found is that Redemption and Sales Counts are concentrated in the months of May to September, and the temperature in Toronto from May to September is above 10 degrees Celsius, which means that Redemption and Sales Counts are mainly concentrated in the summer months, and the summer vacation cycle around the world is basically the same. This also allows more people to travel than would normally be the case.I think these two factors are the main reasons that make counts concentrated in these months.Again, based on WEEKLY DATA it can be found that many more people ride the ferry on weekends than on weekdays, and on weekdays there are many more people riding on Mondays compared to other weekdays.A comparison of Redemption and Sales Counts between 24 hours shows that foot traffic is highest between 9am and 6pm. Now we know a few time factors for high traffic.
+
+
+# Discussion {#sec-dis}
+
+
+## Key Findings
+After summarizing the data and reviewing the ferry frequency across different seasons, an area for improvement becomes clear—the summer, when there is a significantly higher number of ferry riders. Despite this increased demand, there are only 22 ferry trips per day, which is nearly the same as the 21 trips provided in the fall and winter. Additionally, the frequency of ferry trips remains fixed throughout the week, regardless of demand.
+
+To improve efficiency, the frequency of ferry trips during the summer should be increased. Specifically, there should be an increase in the number of summer trips, while the number of trips during the fall and winter could be reduced. Increasing the ferry frequency during the summer, especially on weekends and during peak hours from 9 AM to 6 PM, would reduce passenger wait times and alleviate the stress caused by heavy foot traffic. This would, in turn, help ease congestion.
+
+On the other hand, during off-peak hours and seasons with lower demand, the ferry frequency can be reduced. While this might cause some inconvenience for passengers who travel during these less busy periods, the overall system would become more efficient by reallocating resources when they are most needed.
+
+## Limitations and Future Work
+Since the only data available for use in this article is for the interval July 2023 to September 23, 2024, there is no way to fully guarantee the generalizability of this data, whether it would be equally applicable in other years, and some of the data is not very accurate, as you can see in my hourly data that there is a COUNT before 6:00 a.m. but the earliest time that the ferries have departed all year long is 6:30 a.m. It could be an error caused by entering the data.
+\newpage
+
+# References
